@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <main>
+    <h1>REF Reference Identification</h1>
+    <h2>To specify identifying information</h2>
+    <div>
+      <div>
+        <span><a href="#REF-01">REF-01</a></span>
+        <span><a href="/edi/x12-004010/element/128">128</a></span>
+        <span>Reference Identification Qualifier</span>
+        <span>Identifier (ID)</span>
+        <span>Mandatory</span>
+        <span>2</span><span>3</span><span>-</span>
+        <p>Code qualifying the Reference Identification</p>
+        <a href="#REF-01-codes">Codes (1503)</a>
+      </div>
+      <div>
+        <span><a href="#REF-02">REF-02</a></span>
+        <span><a href="/edi/x12-004010/element/127">127</a></span>
+        <span>Reference Identification</span>
+        <span>String (AN)</span>
+        <span>Conditional</span>
+        <span>1</span><span>30</span><span>-</span>
+        <p>Reference information as defined for a particular Transaction Set</p>
+        <p>R0203: At least one of REF-02 or REF-03 is required</p>
+      </div>
+      <div>
+        <span><a href="#REF-03">REF-03</a></span>
+        <span><a href="/edi/x12-004010/element/352">352</a></span>
+        <span>Description</span>
+        <span>String (AN)</span>
+        <span>Conditional</span>
+        <span>1</span><span>80</span><span>-</span>
+      </div>
+      <div>
+        <span>REF-04</span>
+        <span><a href="/edi/x12-004010/element/C040">C040</a></span>
+        <span>Reference Identifier</span>
+        <span>Composite (composite)</span>
+        <span>Optional</span>
+        <div>
+          <span><a href="#C040-01">01</a></span>
+          <span><a href="/edi/x12-004010/element/128">128</a></span>
+          <span>Reference Identification Qualifier</span>
+          <span>Identifier (ID)</span>
+          <span>Mandatory</span>
+          <span>2</span><span>3</span><span>-</span>
+        </div>
+        <div>
+          <span><a href="#C040-02">02</a></span>
+          <span><a href="/edi/x12-004010/element/127">127</a></span>
+          <span>Reference Identification</span>
+          <span>String (AN)</span>
+          <span>Mandatory</span>
+          <span>1</span><span>30</span><span>-</span>
+        </div>
+        <div>
+          <span><a href="#C040-03">03</a></span>
+          <span><a href="/edi/x12-004010/element/128">128</a></span>
+          <span>Reference Identification Qualifier</span>
+          <span>Identifier (ID)</span>
+          <span>Conditional</span>
+          <span>2</span><span>3</span><span>-</span>
+        </div>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

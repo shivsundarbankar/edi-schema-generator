@@ -1,0 +1,34 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: edi-schema-generator
+
+edischema:
+  # Politeness settings for scraping stedi.com
+  user-agent: "edi-schema-generator/1.0 (internal schema tooling)"
+  min-request-interval-millis: 900
+  request-timeout-seconds: 30
+  max-retries: 3
+  retry-backoff-millis: 1500
+
+  # Raw HTML page cache (avoids re-hitting the website on repeated runs)
+  cache-dir: ".cache/stedi"
+  cache-ttl-hours: 168   # 7 days
+
+  # Output
+  output-dir: "output"
+
+  # Mapping rules
+  # Stedi shows "Max >1" / "Repeat >1" for unbounded usage. EDISchema v4
+  # maxOccurs must be numeric, so ">1" is mapped to this value:
+  default-unbounded-max: 99999
+  # ST / SE are envelope segments handled by the EDI parser control schema,
+  # so by default they are excluded from the generated transaction schema
+  # (this matches the manually-built 850.xml reference file).
+  skip-envelope-segments: true
+
+logging:
+  level:
+    com.edischema: INFO

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <main>
+    <h1>EDI 850 Purchase Order</h1>
+    <h2>Functional Group PO</h2>
+
+    <h2 id="heading"><a href="#heading">Heading</a></h2>
+    <ol>
+      <li><a href="/edi/x12-004010/segment/ST"><span>010</span><span>ST</span> <span>Transaction Set Header</span> <span>Mandatory</span> <span>Max 1</span></a><p>To indicate the start of a transaction set</p></li>
+      <li><a href="/edi/x12-004010/segment/BEG"><span>020</span><span>BEG</span> <span>Beginning Segment for Purchase Order</span> <span>Mandatory</span> <span>Max 1</span></a><p>To indicate the beginning of the Purchase Order Transaction Set</p></li>
+      <li><a href="/edi/x12-004010/segment/CUR"><span>040</span><span>CUR</span> <span>Currency</span> <span>Optional</span> <span>Max 1</span></a></li>
+      <li><a href="/edi/x12-004010/segment/REF"><span>050</span><span>REF</span> <span>Reference Identification</span> <span>Optional</span> <span>Max &gt;1</span></a></li>
+      <li>
+        <div><strong>SAC Loop</strong> <span>Optional</span> <span>Repeat 25</span></div>
+        <ol>
+          <li><a href="/edi/x12-004010/segment/SAC"><span>120</span><span>SAC</span> <span>Service, Promotion, Allowance, or Charge Information</span> <span>Mandatory</span> <span>Max 1</span></a></li>
+          <li><a href="/edi/x12-004010/segment/CUR"><span>125</span><span>CUR</span> <span>Currency</span> <span>Optional</span> <span>Max 1</span></a></li>
+        </ol>
+      </li>
+    </ol>
+
+    <h2 id="detail"><a href="#detail">Detail</a></h2>
+    <ol>
+      <li>
+        <div><strong>PO1 Loop</strong> <span>Mandatory</span> <span>Repeat 100000</span></div>
+        <ol>
+          <li><a href="/edi/x12-004010/segment/PO1"><span>010</span><span>PO1</span> <span>Baseline Item Data</span> <span>Mandatory</span> <span>Max 1</span></a></li>
+          <li>
+            <div><strong>PID Loop</strong> <span>Optional</span> <span>Repeat 1000</span></div>
+            <ol>
+              <li><a href="/edi/x12-004010/segment/PID"><span>050</span><span>PID</span> <span>Product/Item Description</span> <span>Mandatory</span> <span>Max 1</span></a></li>
+            </ol>
+          </li>
+          <li><a href="/edi/x12-004010/segment/REF"><span>100</span><span>REF</span> <span>Reference Identification</span> <span>Optional</span> <span>Max &gt;1</span></a></li>
+        </ol>
+      </li>
+    </ol>
+
+    <h2 id="summary"><a href="#summary">Summary</a></h2>
+    <ol>
+      <li>
+        <div><strong>CTT Loop</strong> <span>Optional</span> <span>Repeat 1</span></div>
+        <ol>
+          <li><a href="/edi/x12-004010/segment/CTT"><span>010</span><span>CTT</span> <span>Transaction Totals</span> <span>Mandatory</span> <span>Max 1</span></a></li>
+        </ol>
+      </li>
+      <li><a href="/edi/x12-004010/segment/SE"><span>030</span><span>SE</span> <span>Transaction Set Trailer</span> <span>Mandatory</span> <span>Max 1</span></a></li>
+    </ol>
+  </main>
+</body>
+</html>
