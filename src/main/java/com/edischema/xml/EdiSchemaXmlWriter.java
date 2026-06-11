@@ -30,7 +30,7 @@ import java.util.List;
  * </ul>
  *
  * <p>In combined mode everything is emitted into a single self-contained file
- * {@code {txn}-combined.xml} with no includes.</p>
+ * {@code {txn}.xml} with no includes.</p>
  */
 @Component
 public class EdiSchemaXmlWriter {
@@ -53,7 +53,7 @@ public class EdiSchemaXmlWriter {
         String txn = result.transaction().id();
 
         if (combined) {
-            Path file = outputDir.resolve(txn + "-combined.xml");
+            Path file = outputDir.resolve(txn + ".xml");
             StringBuilder sb = header();
             appendElementTypes(sb, result, 1);
             sb.append('\n');
