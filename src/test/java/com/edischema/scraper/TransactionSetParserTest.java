@@ -58,7 +58,7 @@ class TransactionSetParserTest {
         assertEquals(-1, ref.maxUse(), "Max >1 must map to the unbounded marker");
 
         var sacLoop = assertInstanceOf(StructureNode.LoopUse.class, heading.get(4));
-        assertEquals("SAC", sacLoop.code());
+        assertEquals("SAC_LOOP", sacLoop.code());
         assertEquals(25, sacLoop.repeat());
         assertEquals(2, sacLoop.children().size());
     }
@@ -66,7 +66,7 @@ class TransactionSetParserTest {
     @Test
     void nestedLoopsArePreserved() {
         var po1Loop = assertInstanceOf(StructureNode.LoopUse.class, doc.detail().get(0));
-        assertEquals("PO1", po1Loop.code());
+        assertEquals("PO1_LOOP", po1Loop.code());
         assertTrue(po1Loop.mandatory());
         assertEquals(100000, po1Loop.repeat());
         assertEquals(3, po1Loop.children().size());
@@ -74,7 +74,7 @@ class TransactionSetParserTest {
         // child order: PO1 segment, nested PID loop, REF segment
         assertInstanceOf(StructureNode.SegmentUse.class, po1Loop.children().get(0));
         var pidLoop = assertInstanceOf(StructureNode.LoopUse.class, po1Loop.children().get(1));
-        assertEquals("PID", pidLoop.code());
+        assertEquals("PID_LOOP", pidLoop.code());
         assertEquals(1000, pidLoop.repeat());
         assertEquals(1, pidLoop.children().size());
 
@@ -87,7 +87,7 @@ class TransactionSetParserTest {
     @Test
     void summaryAreaParsed() {
         var cttLoop = assertInstanceOf(StructureNode.LoopUse.class, doc.summary().get(0));
-        assertEquals("CTT", cttLoop.code());
+        assertEquals("CTT_LOOP", cttLoop.code());
         var se = assertInstanceOf(StructureNode.SegmentUse.class, doc.summary().get(1));
         assertEquals("SE", se.code());
     }

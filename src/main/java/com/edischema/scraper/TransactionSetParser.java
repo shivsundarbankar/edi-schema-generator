@@ -8,10 +8,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -50,12 +48,7 @@ public final class TransactionSetParser {
     private static final Pattern H1_TXN =
             Pattern.compile("(?i)^(?:X12\\s+)?EDI\\s+(\\d{3})\\s+(.+)$");
 
-    /** Counter used to keep generated loop codes unique within one transaction. */
-    private final Map<String, Integer> loopCodeCounts = new HashMap<>();
-
     public TransactionSetDoc parse(String transactionId, String releaseCode, Document document) {
-        loopCodeCounts.clear();
-
         String name = extractTransactionName(transactionId, document);
 
         List<StructureNode> heading = parseArea(document, "heading");
@@ -193,7 +186,7 @@ public final class TransactionSetParser {
 
         int repeat = parseCount(repeatMatcher.group(1), repeatMatcher.group(2));
 
-        String code = uniqueLoopCode(lead);
+        String code = loopCode(lead);
         List<StructureNode> children = parseList(nestedList);
 
         log.debug("Loop parsed: code={} mandatory={} repeat={} text=[{}]",
@@ -328,9 +321,8 @@ public final class TransactionSetParser {
         return number != null ? Integer.parseInt(number) : 1;
     }
 
-    private String uniqueLoopCode(String lead) {
-        int count = loopCodeCounts.merge(lead, 1, Integer::sum);
-        return count == 1 ? lead : lead + "_" + count;
+    private String loopCode(String lead) {
+        return lead + "_LOOP";
     }
 
     private static Element firstNestedList(Element li) {

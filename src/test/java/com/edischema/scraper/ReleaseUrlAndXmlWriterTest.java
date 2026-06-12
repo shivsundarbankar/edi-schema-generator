@@ -70,11 +70,11 @@ class ReleaseUrlAndXmlWriterTest {
         String txn = Files.readString(tempDir.resolve("850.xml"));
         assertTrue(txn.contains("<include schemaLocation=\"850-segments.xml\"/>"));
         assertTrue(txn.contains("<segment type=\"BEG\" minOccurs=\"1\" maxOccurs=\"1\"/>"));
-        assertTrue(txn.contains("<loop code=\"N1\" minOccurs=\"0\" maxOccurs=\"200\">"));
+        assertTrue(txn.contains("<loop code=\"N1_LOOP\" minOccurs=\"0\" maxOccurs=\"200\">"));
         // "Max >1" becomes the configured unbounded substitute
         assertTrue(txn.contains("<segment type=\"REF\" minOccurs=\"0\" maxOccurs=\"99999\"/>"));
         // loop body order: N1 then REF, exactly as in the structure
-        int loopIdx = txn.indexOf("<loop code=\"N1\"");
+        int loopIdx = txn.indexOf("<loop code=\"N1_LOOP\"");
         int n1Idx = txn.indexOf("<segment type=\"N1\"");
         int refInLoopIdx = txn.indexOf("<segment type=\"REF\" minOccurs=\"0\"", loopIdx);
         assertTrue(loopIdx < n1Idx && n1Idx < refInLoopIdx,
@@ -114,7 +114,7 @@ class ReleaseUrlAndXmlWriterTest {
                                 "Beginning Segment for Purchase Order", true, 1),
                         new StructureNode.SegmentUse("050", "REF",
                                 "Reference Identification", false, -1),
-                        new StructureNode.LoopUse("N1", "N1 Loop", false, 200, List.of(
+                        new StructureNode.LoopUse("N1_LOOP", "N1 Loop", false, 200, List.of(
                                 new StructureNode.SegmentUse("310", "N1", "Name", true, 1),
                                 new StructureNode.SegmentUse("330", "REF",
                                         "Reference Identification", false, -1)))),

@@ -24,7 +24,7 @@ public sealed interface StructureNode permits StructureNode.SegmentUse, Structur
     /**
      * A loop within the transaction structure. Children may contain nested loops.
      *
-     * @param code      generated loop code (leading segment code, suffixed when repeated)
+     * @param code      generated loop code, e.g. N1_LOOP (lead segment code + "_LOOP")
      * @param name      loop display name on the website, e.g. "N1 Loop"
      * @param mandatory Mandatory -> minOccurs=1
      * @param repeat    repeat count; -1 means "&gt;1" (unbounded) on the website

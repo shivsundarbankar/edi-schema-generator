@@ -55,13 +55,13 @@ public class EdiSchemaXmlWriter {
         if (combined) {
             Path file = outputDir.resolve(txn + ".xml");
             StringBuilder sb = header();
+            appendTransaction(sb, result, 1);
+            sb.append('\n');
             appendElementTypes(sb, result, 1);
             sb.append('\n');
             appendCompositeTypes(sb, result, 1);
             sb.append('\n');
             appendSegmentTypes(sb, result, 1);
-            sb.append('\n');
-            appendTransaction(sb, result, 1);
             footer(sb);
             Files.writeString(file, sb.toString(), StandardCharsets.UTF_8);
             written.add(file);
