@@ -34,10 +34,13 @@ public final class TransactionSetParser {
     private static final Pattern SEGMENT_HREF =
             Pattern.compile("/segment/([A-Z][A-Z0-9]{1,2})/?(?:[?#].*)?$");
 
-    private static final Pattern LOOP_TEXT = Pattern.compile(
-            "([A-Z][A-Z0-9]{1,3})\\s+Loop\\b.*?(Mandatory|Optional)?\\b.*?Repeat\\s*(>?)\\s*(\\d+)?",
-            Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+    private static final Pattern LOOP_LEAD = Pattern.compile(
+            "\\b([A-Z][A-Z0-9]{1,3})\\s+Loop\\b",
+            Pattern.CASE_INSENSITIVE);
 
+    private static final Pattern LOOP_REPEAT = Pattern.compile(
+            "\\bRepeat\\s*(>?)\\s*(\\d+)?",
+            Pattern.CASE_INSENSITIVE);
     private static final Pattern POSITION = Pattern.compile("\\b(\\d{3,4})\\b");
 
     private static final Pattern REQUIREMENT = Pattern.compile("\\b(Mandatory|Optional)\\b");
@@ -145,34 +148,61 @@ public final class TransactionSetParser {
             if (!li.tagName().equals("li")) {
                 continue;
             }
-            Element nestedList = firstNestedList(li);
-            String ownText = ownText(li);
 
-            Matcher loop = LOOP_TEXT.matcher(ownText);
-            if (nestedList != null && loop.find()) {
-                String lead = loop.group(1).toUpperCase(Locale.ROOT);
-                boolean mandatory = "Mandatory".equalsIgnoreCase(loop.group(2));
-                int repeat = parseCount(loop.group(3), loop.group(4));
-                String code = uniqueLoopCode(lead);
-                List<StructureNode> children = parseList(nestedList);
-                nodes.add(new StructureNode.LoopUse(code, lead + " Loop", mandatory,
-                        repeat, children));
+            Element nestedList = firstNestedList(li);
+
+            StructureNode.LoopUse loop = parseLoopItem(li, nestedList);
+            if (loop != null) {
+                nodes.add(loop);
                 continue;
             }
 
-            StructureNode.SegmentUse segment = parseSegmentItem(li, ownText);
+            StructureNode.SegmentUse segment = parseSegmentItem(li);
             if (segment != null) {
                 nodes.add(segment);
             } else if (nestedList != null) {
-                // Defensive: a nested list without a recognizable loop label -
-                // keep its children inline so no segment is silently dropped.
                 nodes.addAll(parseList(nestedList));
             }
         }
         return nodes;
     }
 
-    private StructureNode.SegmentUse parseSegmentItem(Element li, String ownText) {
+
+    private StructureNode.LoopUse parseLoopItem(Element li, Element nestedList) {
+        if (nestedList == null) {
+            return null;
+        }
+
+        String text = itemTextWithoutNestedLists(li);
+
+        Matcher leadMatcher = LOOP_LEAD.matcher(text);
+        if (!leadMatcher.find()) {
+            return null;
+        }
+
+        Matcher repeatMatcher = LOOP_REPEAT.matcher(text);
+        if (!repeatMatcher.find()) {
+            return null;
+        }
+
+        String lead = leadMatcher.group(1).toUpperCase(Locale.ROOT);
+
+        Matcher reqMatcher = REQUIREMENT.matcher(text);
+        boolean mandatory = reqMatcher.find()
+                && reqMatcher.group(1).equalsIgnoreCase("Mandatory");
+
+        int repeat = parseCount(repeatMatcher.group(1), repeatMatcher.group(2));
+
+        String code = uniqueLoopCode(lead);
+        List<StructureNode> children = parseList(nestedList);
+
+        log.debug("Loop parsed: code={} mandatory={} repeat={} text=[{}]",
+                code, mandatory, repeat, text);
+
+        return new StructureNode.LoopUse(code, lead + " Loop", mandatory, repeat, children);
+    }
+
+    private StructureNode.SegmentUse parseSegmentItem(Element li) {
         Element link = li.selectFirst("a[href*=/segment/]");
         if (link == null) {
             return null;
@@ -182,96 +212,93 @@ public final class TransactionSetParser {
         if (!href.find()) {
             return null;
         }
-        String code = href.group(1);
 
-        String rowText = buildRowText(link);
-        log.debug("Segment {} rowText=[{}]", code, rowText);
+        String code = href.group(1);
+        String text = buildRowText(link);
 
         String position = "";
-        Matcher pos = POSITION.matcher(rowText);
+        Matcher pos = POSITION.matcher(text);
         if (pos.find()) {
             position = pos.group(1);
         }
 
         boolean mandatory = false;
-        Matcher req = REQUIREMENT.matcher(rowText);
+        Matcher req = REQUIREMENT.matcher(text);
         if (req.find()) {
             mandatory = req.group(1).equalsIgnoreCase("Mandatory");
-            log.debug("Segment {} mandatory={} matched=[{}]", code, mandatory, req.group(1));
-        } else {
-            log.warn("Segment {} - no Mandatory/Optional found in rowText=[{}]", code, rowText);
         }
 
         int maxUse = 1;
-        Matcher max = MAX_USE.matcher(rowText);
+        Matcher max = MAX_USE.matcher(text);
         if (max.find()) {
             maxUse = parseCount(max.group(1), max.group(2));
         }
 
-        String name = extractSegmentName(rowText, position, code);
+        String name = extractSegmentName(text, position, code);
+
+        log.debug("Segment parsed: code={} mandatory={} maxUse={} text=[{}]",
+                code, mandatory, maxUse, text);
+
         return new StructureNode.SegmentUse(position, code, name, mandatory, maxUse);
     }
 
-    /**
-     * Builds row text by walking each span inside the <a> tag and joining
-     * their individual text content with spaces - prevents Jsoup from
-     * concatenating adjacent span texts without spaces.
-     *
-     * Example spans:
-     *   <span>010</span>           -> "010"
-     *   <span><button>BEG</button></span> -> "BEG"
-     *   <span>Transaction Set Header<span>Mandatory</span><span>-></span></span> -> "Transaction Set Header Mandatory ->"
-     *   <span>Max 1</span>        -> "Max 1"
-     *
-     * Result: "010 BEG Transaction Set Header Mandatory -> Max 1"
-     */
     private static String buildRowText(Element link) {
-        // Get the top-level spans inside the <a>
         StringBuilder sb = new StringBuilder();
-        for (Element span : link.children()) {
-            String spanText = spanToText(span);
-            if (!spanText.isBlank()) {
+        for (Element child : link.children()) {
+            String part = extractText(child);
+            if (!part.isBlank()) {
                 if (sb.length() > 0) {
                     sb.append(' ');
                 }
-                sb.append(spanText.trim());
+                sb.append(part.trim());
             }
         }
-        return sb.toString()
-                .replace('\u00A0', ' ')
-                .replaceAll("\\s+", " ")
-                .trim();
+        return normalise(sb.toString());
     }
 
-    /**
-     * Recursively extracts text from a span, joining child texts with spaces.
-     * Skips the "->" / "openInSidebar" arrow span as it's decorative.
-     */
-    private static String spanToText(Element el) {
+    private static String itemTextWithoutNestedLists(Element li) {
+        Element clone = li.clone();
+        clone.select("ol, ul").remove();
+        return normalise(extractText(clone));
+    }
+
+    private static String extractText(Element el) {
         if (el.hasClass("openInSidebar")) {
             return "";
         }
 
-        if (el.children().isEmpty()) {
-            return el.text();
-        }
-
         StringBuilder sb = new StringBuilder();
-        String ownText = el.ownText();
-        if (!ownText.isBlank()) {
-            sb.append(ownText.trim());
-        }
-        for (Element child : el.children()) {
-            String childText = spanToText(child);
-            if (!childText.isBlank()) {
-                if (sb.length() > 0) {
-                    sb.append(' ');
+
+        for (org.jsoup.nodes.Node node : el.childNodes()) {
+            if (node instanceof org.jsoup.nodes.TextNode textNode) {
+                String text = textNode.text().replace('\u00A0', ' ').trim();
+                if (!text.isBlank()) {
+                    if (sb.length() > 0) {
+                        sb.append(' ');
+                    }
+                    sb.append(text);
                 }
-                sb.append(childText.trim());
+            } else if (node instanceof Element child) {
+                String childText = extractText(child);
+                if (!childText.isBlank()) {
+                    if (sb.length() > 0) {
+                        sb.append(' ');
+                    }
+                    sb.append(childText.trim());
+                }
             }
         }
+
         return sb.toString();
     }
+
+    private static String normalise(String text) {
+        return text.replace('\u00A0', ' ')
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
+
+
 
     /** "010 ST Transaction Set Header Mandatory Max 1 ..." -> "Transaction Set Header" */
     private String extractSegmentName(String ownText, String position, String code) {
@@ -304,26 +331,6 @@ public final class TransactionSetParser {
     private String uniqueLoopCode(String lead) {
         int count = loopCodeCounts.merge(lead, 1, Integer::sum);
         return count == 1 ? lead : lead + "_" + count;
-    }
-
-    /** Text of the list item excluding any nested lists. */
-    private static String ownText(Element li) {
-        Element clone = li.clone();
-        clone.select("ol, ul").remove();
-        // Use wholeText approach - join each child's text with spaces
-        StringBuilder sb = new StringBuilder();
-        for (Element child : clone.children()) {
-            String t = child.text().replace('\u00A0', ' ').trim();
-            if (!t.isBlank()) {
-                if (sb.length() > 0) sb.append(' ');
-                sb.append(t);
-            }
-        }
-        // Fallback to direct text if no children
-        String result = sb.length() > 0 ? sb.toString() : clone.text();
-        return result.replace('\u00A0', ' ')
-                .replaceAll("\\s+", " ")
-                .trim();
     }
 
     private static Element firstNestedList(Element li) {
