@@ -132,7 +132,7 @@ public final class TransactionSetParser {
             // stop when we run into the next area header
             if ((tag.equals("h1") || tag.equals("h2")) && el != header
                     && el.text().trim().toLowerCase(Locale.ROOT)
-                            .matches("heading|detail|summary")) {
+                    .matches("heading|detail|summary")) {
                 return null;
             }
         }
@@ -177,32 +177,100 @@ public final class TransactionSetParser {
         if (link == null) {
             return null;
         }
+
         Matcher href = SEGMENT_HREF.matcher(link.attr("href"));
         if (!href.find()) {
             return null;
         }
         String code = href.group(1);
 
+        String rowText = buildRowText(link);
+        log.debug("Segment {} rowText=[{}]", code, rowText);
+
         String position = "";
-        Matcher pos = POSITION.matcher(ownText);
+        Matcher pos = POSITION.matcher(rowText);
         if (pos.find()) {
             position = pos.group(1);
         }
 
         boolean mandatory = false;
-        Matcher req = REQUIREMENT.matcher(ownText);
+        Matcher req = REQUIREMENT.matcher(rowText);
         if (req.find()) {
-            mandatory = req.group(1).equals("Mandatory");
+            mandatory = req.group(1).equalsIgnoreCase("Mandatory");
+            log.debug("Segment {} mandatory={} matched=[{}]", code, mandatory, req.group(1));
+        } else {
+            log.warn("Segment {} - no Mandatory/Optional found in rowText=[{}]", code, rowText);
         }
 
         int maxUse = 1;
-        Matcher max = MAX_USE.matcher(ownText);
+        Matcher max = MAX_USE.matcher(rowText);
         if (max.find()) {
             maxUse = parseCount(max.group(1), max.group(2));
         }
 
-        String name = extractSegmentName(ownText, position, code);
+        String name = extractSegmentName(rowText, position, code);
         return new StructureNode.SegmentUse(position, code, name, mandatory, maxUse);
+    }
+
+    /**
+     * Builds row text by walking each span inside the <a> tag and joining
+     * their individual text content with spaces - prevents Jsoup from
+     * concatenating adjacent span texts without spaces.
+     *
+     * Example spans:
+     *   <span>010</span>           -> "010"
+     *   <span><button>BEG</button></span> -> "BEG"
+     *   <span>Transaction Set Header<span>Mandatory</span><span>-></span></span> -> "Transaction Set Header Mandatory ->"
+     *   <span>Max 1</span>        -> "Max 1"
+     *
+     * Result: "010 BEG Transaction Set Header Mandatory -> Max 1"
+     */
+    private static String buildRowText(Element link) {
+        // Get the top-level spans inside the <a>
+        StringBuilder sb = new StringBuilder();
+        for (Element span : link.children()) {
+            String spanText = spanToText(span);
+            if (!spanText.isBlank()) {
+                if (sb.length() > 0) {
+                    sb.append(' ');
+                }
+                sb.append(spanText.trim());
+            }
+        }
+        return sb.toString()
+                .replace('\u00A0', ' ')
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
+
+    /**
+     * Recursively extracts text from a span, joining child texts with spaces.
+     * Skips the "->" / "openInSidebar" arrow span as it's decorative.
+     */
+    private static String spanToText(Element el) {
+        if (el.hasClass("openInSidebar")) {
+            return "";
+        }
+
+        if (el.children().isEmpty()) {
+            return el.text();
+        }
+
+        StringBuilder sb = new StringBuilder();
+        String ownText = el.ownText();
+        if (!ownText.isBlank()) {
+            sb.append(ownText.trim());
+        }
+        for (Element child : el.children()) {
+            String childText = spanToText(child);
+            if (!childText.isBlank()) {
+                if (sb.length() > 0) {
+                    sb.append(' ');
+                }
+                sb.append(childText.trim());
+            }
+        }
+        return sb.toString();
     }
 
     /** "010 ST Transaction Set Header Mandatory Max 1 ..." -> "Transaction Set Header" */
@@ -242,7 +310,20 @@ public final class TransactionSetParser {
     private static String ownText(Element li) {
         Element clone = li.clone();
         clone.select("ol, ul").remove();
-        return clone.text().replaceAll("\\s+", " ").trim();
+        // Use wholeText approach - join each child's text with spaces
+        StringBuilder sb = new StringBuilder();
+        for (Element child : clone.children()) {
+            String t = child.text().replace('\u00A0', ' ').trim();
+            if (!t.isBlank()) {
+                if (sb.length() > 0) sb.append(' ');
+                sb.append(t);
+            }
+        }
+        // Fallback to direct text if no children
+        String result = sb.length() > 0 ? sb.toString() : clone.text();
+        return result.replace('\u00A0', ' ')
+                .replaceAll("\\s+", " ")
+                .trim();
     }
 
     private static Element firstNestedList(Element li) {
